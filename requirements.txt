@@ -1,0 +1,9 @@
+numpy==1.22.3
+opencv-python==4.9.0.80
+pandas==1.4.1
+Pillow==10.0.1
+Requests==2.32.3
+tqdm==4.63.0
+torch==2.0.0
+torchvision==0.15.1
+scikit-learn==1.2.2

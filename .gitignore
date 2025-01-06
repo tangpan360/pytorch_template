@@ -1,0 +1,66 @@
+# Python 缓存文件
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# 日志文件和输出
+logs/
+*.log
+*.jsonl
+
+# 检查点文件和模型权重
+checkpoints/
+*.pth
+*.pt
+
+# 数据集原始文件和中间文件
+dataset/raw/
+*.tar.gz
+*.zip
+*.7z
+
+# 数据处理中的临时文件
+*.csv
+*.h5
+*.npy
+*.pkl
+
+# Jupyter Notebook 的自动生成文件
+.ipynb_checkpoints/
+
+# 环境配置文件
+.env
+.venv/
+venv/
+virtualenv/
+*.env
+
+# IDE 和编辑器相关的文件
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# 操作系统生成的无用文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 临时文件
+*.swp
+*.tmp
+*.bak
+*.orig
+*.rej
+
+# 可视化输出文件
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+
+# 忽略主程序运行生成的文件
+run_main.sh~
