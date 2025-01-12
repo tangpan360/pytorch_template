@@ -16,10 +16,7 @@ checkpoints/
 *.pt
 
 # 数据集原始文件和中间文件
-dataset/raw/
-*.tar.gz
-*.zip
-*.7z
+dataset/
 
 # 数据处理中的临时文件
 *.csv

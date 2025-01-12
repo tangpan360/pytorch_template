@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 
 # 定义下载链接和目标文件夹
 url = "http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
-target_folder = "../dataset/raw"
+target_folder = "../../dataset/cifar-10/raw"
 
 # 如果目标文件夹不存在，则创建它
 if not os.path.exists(target_folder):
