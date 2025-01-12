@@ -21,14 +21,14 @@ from utils.time_utils import format_time
 from utils.seed_utils import set_seed
 
 # 你的模型
-from models.LeNet import LeNet
+from models import VGGNet
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a simple LeNet on custom CIFAR-10 data.")
     parser.add_argument("--seed", type=int, default=42, help="随机种子")
     parser.add_argument("--num_classes", type=int, default=10, help="类别数")
-    parser.add_argument("--lr", type=float, default=1e-3, help="学习率")
+    parser.add_argument("--lr", type=float, default=1e-4, help="学习率")
     parser.add_argument("--epochs", type=int, default=50, help="训练轮数")
     parser.add_argument("--train_dir", type=str, default="./dataset/processed/cifar-10/train_data", help="训练集数据位置")
     parser.add_argument("--train_labels", type=str, default="./dataset/processed/cifar-10/train_annotations.csv", help="训练集数据标签csv")
@@ -92,7 +92,7 @@ def main():
 
     # 初始化模型
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = LeNet(num_classes=args.num_classes).to(device)
+    model = VGGNet(num_classes=args.num_classes).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
