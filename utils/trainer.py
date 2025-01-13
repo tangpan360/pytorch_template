@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 
 class Trainer:
-    def __init__(self, model, criterion, optimizer, device):
+    def __init__(self, model, criterion, optimizer, device, scheduler=None):
         """
         初始化 Trainer 类。
 
@@ -13,11 +13,13 @@ class Trainer:
             criterion (torch.nn.Module): 损失函数。
             optimizer (torch.optim.Optimizer): 优化器。
             device (torch.device): 训练设备（CPU 或 GPU）。
+            scheduler (torch.optim.lr_scheduler._LRScheduler, optional): 学习率调度器。
         """
         self.model = model
         self.criterion = criterion
         self.optimizer = optimizer
         self.device = device
+        self.scheduler = scheduler
 
     def train_one_epoch(self, dataloader):
         """
@@ -29,17 +31,25 @@ class Trainer:
         correct = 0
         total = 0
 
-        for images, labels in tqdm(dataloader, desc="Training", leave=False, disable=True):
-            images, labels = images.to(self.device), labels.to(self.device)
+        for batch in tqdm(dataloader, desc="Training", leave=False, disable=False):
+            input_ids = batch["input_ids"].to(self.device)
+            attention_mask = batch["attention_mask"].to(self.device)
+            labels = batch["labels"].to(self.device)
 
             self.optimizer.zero_grad()
-            outputs = self.model(images)
-            loss = self.criterion(outputs, labels)
+            outputs = self.model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
+            loss = outputs.loss
+            logits = outputs.logits
+
             loss.backward()
             self.optimizer.step()
 
-            total_loss += loss.item() * images.size(0)
-            _, predicted = torch.max(outputs, 1)
+            # 调用 scheduler.step() 每个 batch 之后
+            if self.scheduler is not None:
+                self.scheduler.step()
+
+            total_loss += loss.item() * input_ids.size(0)
+            _, predicted = torch.max(logits, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
@@ -58,13 +68,17 @@ class Trainer:
         total = 0
 
         with torch.no_grad():
-            for images, labels in tqdm(dataloader, desc="Validation", leave=False, disable=True):
-                images, labels = images.to(self.device), labels.to(self.device)
-                outputs = self.model(images)
-                loss = self.criterion(outputs, labels)
+            for batch in tqdm(dataloader, desc="Validation", leave=False, disable=True):
+                input_ids = batch["input_ids"].to(self.device)
+                attention_mask = batch["attention_mask"].to(self.device)
+                labels = batch["labels"].to(self.device)
 
-                total_loss += loss.item() * images.size(0)
-                _, predicted = torch.max(outputs, 1)
+                outputs = self.model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
+                loss = outputs.loss
+                logits = outputs.logits
+
+                total_loss += loss.item() * input_ids.size(0)
+                _, predicted = torch.max(logits, 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
 
@@ -83,16 +97,33 @@ class Trainer:
         total = 0
 
         with torch.no_grad():
-            for images, labels in tqdm(dataloader, desc="Testing", leave=False, disable=True):
-                images, labels = images.to(self.device), labels.to(self.device)
-                outputs = self.model(images)
-                loss = self.criterion(outputs, labels)
+            for batch in tqdm(dataloader, desc="Testing", leave=False, disable=True):
+                input_ids = batch["input_ids"].to(self.device)
+                attention_mask = batch["attention_mask"].to(self.device)
+                labels = batch["labels"].to(self.device)
 
-                total_loss += loss.item() * images.size(0)
-                _, predicted = torch.max(outputs, 1)
+                outputs = self.model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
+                loss = outputs.loss
+                logits = outputs.logits
+
+                total_loss += loss.item() * input_ids.size(0)
+                _, predicted = torch.max(logits, 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
 
         avg_loss = total_loss / total
         accuracy = 100.0 * correct / total
         return avg_loss, accuracy
+    
+    def get_current_lr(self):
+        """
+        获取当前学习率。
+
+        Returns:
+            float: 当前学习率，如果有调度器，则返回调度器的学习率；否则，从优化器获取学习率。
+        """
+        if self.scheduler is not None:
+            return self.scheduler.get_last_lr()[0]
+        else:
+            # 如果没有 scheduler，就直接从 optimizer 中取学习率
+            return self.optimizer.param_groups[0]['lr']
