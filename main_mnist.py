@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 
 # 导入你自己的数据集类
-from datasets import MnistDataset
+from dataset_class import MnistDataset
 
 # 导入封装好的类和函数
 from utils.trainer import Trainer
