@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 
 # 导入你自己的数据集类
-from dataset_class import Cifar10Dataset
+from datasets import Cifar10Dataset
 
 # 导入封装好的类和函数
 from utils.trainer import Trainer
@@ -29,12 +29,12 @@ def parse_args():
     parser.add_argument("--num_classes", type=int, default=10, help="类别数")
     parser.add_argument("--lr", type=float, default=1e-4, help="学习率")
     parser.add_argument("--epochs", type=int, default=50, help="训练轮数")
-    parser.add_argument("--train_dir", type=str, default="./dataset/cifar10/processed/train_data", help="训练集数据位置")
-    parser.add_argument("--train_labels", type=str, default="./dataset/cifar10/processed/train_annotations.csv", help="训练集数据标签csv")
-    parser.add_argument("--val_dir", type=str, default="./dataset/cifar10/processed/val_data", help="验证集数据位置")
-    parser.add_argument("--val_labels", type=str, default="./dataset/cifar10/processed/val_annotations.csv", help="验证集数据标签csv")
-    parser.add_argument("--test_dir", type=str, default="./dataset/cifar10/processed/test_data", help="测试集数据位置")
-    parser.add_argument("--test_labels", type=str, default="./dataset/cifar10/processed/test_annotations.csv", help="测试集数据标签csv")
+    parser.add_argument("--train_dir", type=str, default="./data/cifar10/processed/train_data", help="训练集数据位置")
+    parser.add_argument("--train_labels", type=str, default="./data/cifar10/processed/train_annotations.csv", help="训练集数据标签csv")
+    parser.add_argument("--val_dir", type=str, default="./data/cifar10/processed/val_data", help="验证集数据位置")
+    parser.add_argument("--val_labels", type=str, default="./data/cifar10/processed/val_annotations.csv", help="验证集数据标签csv")
+    parser.add_argument("--test_dir", type=str, default="./data/cifar10/processed/test_data", help="测试集数据位置")
+    parser.add_argument("--test_labels", type=str, default="./data/cifar10/processed/test_annotations.csv", help="测试集数据标签csv")
     parser.add_argument("--batch_size", type=int, default=64, help="批量大小")
 
     parser.add_argument("--patience", type=int, default=10, help="早停的等待轮数")

@@ -16,7 +16,7 @@ checkpoints/
 *.pt
 
 # 数据集原始文件和中间文件
-dataset/
+data/
 
 # 数据处理中的临时文件
 *.csv

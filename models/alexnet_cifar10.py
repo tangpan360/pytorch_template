@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class AlexNet(nn.Module):
+class AlexNetCifar10(nn.Module):
     """
     AlexNet 模型适配 CIFAR-10 数据集
     输入(3, 32, 32) => 输出 num_classes
@@ -10,7 +10,7 @@ class AlexNet(nn.Module):
     """
 
     def __init__(self, num_classes=10):
-        super(AlexNet, self).__init__()
+        super(AlexNetCifar10, self).__init__()
 
         # 特征提取部分 (Feature Extractor)
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1)  # 输入 (3, 32, 32)，输出 (64, 32, 32)

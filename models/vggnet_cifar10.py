@@ -2,14 +2,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class VGGNet(nn.Module):
+class VGGNetCifar10(nn.Module):
     """
     简易 VGGNet: 输入(3, 32, 32) => 输出 num_classes
     适配 CIFAR-10 数据集的小型 VGGNet。卷积核使用 3x3，所有池化层的步幅均为 2，特征图尺寸逐步减小。
     """
 
     def __init__(self, num_classes=10):
-        super(VGGNet, self).__init__()
+        super(VGGNetCifar10, self).__init__()
 
         # 特征提取部分 (Feature Extractor)
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, padding=1)  # 输入 (3, 32, 32) => 输出 (64, 32, 32)

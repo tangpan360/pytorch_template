@@ -49,8 +49,8 @@ def save_images(image_data, label_data, save_dir, prefix):
 
 def main():
     # 定义路径
-    raw_data_dir = os.path.abspath("../../dataset/mnist/raw")
-    processed_data_dir = os.path.abspath("../../dataset/mnist/processed")
+    raw_data_dir = os.path.abspath("../../data/mnist/raw")
+    processed_data_dir = os.path.abspath("../../data/mnist/processed")
 
     # 文件路径
     train_images_path = os.path.join(raw_data_dir, "train-images.idx3-ubyte")
