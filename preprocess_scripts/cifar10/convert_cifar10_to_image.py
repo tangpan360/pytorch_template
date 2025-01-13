@@ -27,12 +27,12 @@ def save_images(data, labels, label_names, save_dir, start_index=0):
 label_name = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
 
 # 定义CIFAR-10数据集的文件路径
-base_path = "../../dataset/cifar-10/raw/cifar-10-batches-py/"
+base_path = "../../dataset/cifar10/raw/cifar-10-batches-py/"
 train_batch_files = ["data_batch_1", "data_batch_2", "data_batch_3", "data_batch_4", "data_batch_5"]
 test_batch_files = ["test_batch"]
 
 # 合并所有训练集数据到 train_data 文件夹中
-train_save_dir = "../../dataset/cifar-10/processed/train_data"
+train_save_dir = "../../dataset/cifar10/processed/train_data"
 all_train_data = []
 all_train_labels = []
 
@@ -54,7 +54,7 @@ save_images(all_train_data, all_train_labels, label_name, train_save_dir, start_
 start_index += len(all_train_data)
 
 # 将测试集数据保存到 test_data 文件夹中
-test_save_dir = "../../dataset/cifar-10/processed/test_data"
+test_save_dir = "../../dataset/cifar10/processed/test_data"
 for batch_file in tqdm(test_batch_files, desc="Loading test batches"):
     data_batch = unpickle(os.path.join(base_path, batch_file))
     cifar_data = data_batch[b'data']

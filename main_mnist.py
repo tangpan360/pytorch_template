@@ -11,8 +11,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 
 # 导入你自己的数据集类
-from utils.cifar10_dataset import Cifar10Dataset
-from utils import Cifar10Dataset
+from dataset_class import MnistDataset
 
 # 导入封装好的类和函数
 from utils.trainer import Trainer
@@ -21,21 +20,22 @@ from utils.time_utils import format_time
 from utils.seed_utils import set_seed
 
 # 你的模型
-from models import VGGNet
+from models import VGGNetMnist
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Train a simple LeNet on custom CIFAR-10 data.")
+    parser = argparse.ArgumentParser(description="Train a simple LeNet on custom mnist data.")
     parser.add_argument("--seed", type=int, default=42, help="随机种子")
     parser.add_argument("--num_classes", type=int, default=10, help="类别数")
     parser.add_argument("--lr", type=float, default=1e-4, help="学习率")
     parser.add_argument("--epochs", type=int, default=50, help="训练轮数")
-    parser.add_argument("--train_dir", type=str, default="./dataset/cifar-10/processed/train_data", help="训练集数据位置")
-    parser.add_argument("--train_labels", type=str, default="./dataset/cifar-10/processed/train_annotations.csv", help="训练集数据标签csv")
-    parser.add_argument("--val_dir", type=str, default="./dataset/cifar-10/processed/val_data", help="验证集数据位置")
-    parser.add_argument("--val_labels", type=str, default="./dataset/cifar-10/processed/val_annotations.csv", help="验证集数据标签csv")
-    parser.add_argument("--test_dir", type=str, default="./dataset/cifar-10/processed/test_data", help="测试集数据位置")
-    parser.add_argument("--test_labels", type=str, default="./dataset/cifar-10/processed/test_annotations.csv", help="测试集数据标签csv")
+    parser.add_argument("--train_dir", type=str, default="./dataset/mnist/processed/train_data", help="训练集数据位置")
+    parser.add_argument("--train_labels", type=str, default="./dataset/mnist/processed/train_annotations.csv", help="训练集数据标签csv")
+    parser.add_argument("--val_dir", type=str, default="./dataset/mnist/processed/val_data", help="验证集数据位置")
+    parser.add_argument("--val_labels", type=str, default="./dataset/mnist/processed/val_annotations.csv", help="验证集数据标签csv")
+    parser.add_argument("--test_dir", type=str, default="./dataset/mnist/processed/test_data", help="测试集数据位置")
+    parser.add_argument("--test_labels", type=str, default="./dataset/mnist/processed/test_annotations.csv", help="测试集数据标签csv")
+    parser.add_argument("--log_dir", type=str, default="./logs/mnist/", help="日志文件夹路径")
     parser.add_argument("--batch_size", type=int, default=64, help="批量大小")
 
     parser.add_argument("--patience", type=int, default=10, help="早停的等待轮数")
@@ -46,7 +46,7 @@ def parse_args():
                   "如果设置为 True，则在早停检查点和模型保存时打印提示信息；如果设置为 False，则不打印这些信息。默认值为 True。")
 
     # 新增的权重保存路径参数
-    parser.add_argument("--save_path", type=str, default="./checkpoints/best_model.pth",
+    parser.add_argument("--save_path", type=str, default="./checkpoints/mnist/best_model.pth",
                         help="最优模型权重保存路径（含文件名）")
 
     args = parser.parse_args()
@@ -69,17 +69,17 @@ def main():
     ])
 
     # 构建数据集
-    train_dataset = Cifar10Dataset(
+    train_dataset = MnistDataset(
         data_dir=args.train_dir,
         labels_csv=args.train_labels,
         transform=train_transform,
     )
-    val_dataset = Cifar10Dataset(
+    val_dataset = MnistDataset(
         data_dir=args.val_dir,
         labels_csv=args.val_labels,
         transform=val_transform,
     )
-    test_dataset = Cifar10Dataset(
+    test_dataset = MnistDataset(
         data_dir=args.test_dir,
         labels_csv=args.test_labels,
         transform=test_transform,
@@ -92,7 +92,7 @@ def main():
 
     # 初始化模型
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = VGGNet(num_classes=args.num_classes).to(device)
+    model = VGGNetMnist(num_classes=args.num_classes).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
@@ -119,8 +119,8 @@ def main():
     )
 
     # ========== 1) 创建日志文件夹 ========== #
-    os.makedirs("./logs", exist_ok=True)
-    log_path = "logs/training_metrics.jsonl"  # 每个 epoch 一行
+    os.makedirs(args.log_dir, exist_ok=True)
+    log_path = os.path.join(args.log_dir, "training_metrics.jsonl")  # 每个 epoch 一行
 
     # 如果文件存在，就删除
     if os.path.exists(log_path):
