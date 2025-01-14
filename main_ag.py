@@ -14,7 +14,7 @@ from transformers import BertTokenizer, BertForSequenceClassification, get_linea
 from dataset_class import AGNewsDataset
 
 # 导入封装好的类和函数
-from utils.trainer import Trainer
+from utils import TrainerBert
 from utils.early_stopping import EarlyStopping
 from utils.time_utils import format_time
 from utils.seed_utils import set_seed
@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument("--batch_size", type=int, default=64, help="批量大小")
 
     # scheduler 相关参数
-    parser.add_argument("--use_scheduler", action="store_true", default=False, help="是否使用学习率调度器")
+    parser.add_argument("--use_scheduler", action="store_true", default=True, help="是否使用学习率调度器")
     parser.add_argument("--warmup_steps", type=int, default=6000, help="学习率预热步数")
 
     # 针对 AGNews 的数据路径配置
@@ -39,8 +39,8 @@ def parse_args():
     parser.add_argument("--test_path", type=str, default="./data/ag_news/processed/test.parquet", help="测试集数据路径")
 
     # 将 tokenizer 和 model 名字或路径作为参数传入
-    parser.add_argument("--tokenizer_name", type=str, default="bert-base-uncased", help="HuggingFace Tokenizer 名称或路径")
-    parser.add_argument("--model_name", type=str, default="bert-base-uncased", help="HuggingFace 预训练模型名称或路径")
+    parser.add_argument("--tokenizer_name", type=str, default="prajjwal1/bert-tiny", help="HuggingFace Tokenizer 名称或路径")
+    parser.add_argument("--model_name", type=str, default="prajjwal1/bert-tiny", help="HuggingFace 预训练模型名称或路径")
 
     # 其它可选参数
     parser.add_argument("--max_length", type=int, default=128, help="文本最大长度")
@@ -109,7 +109,7 @@ def main():
         scheduler = None
 
     # 初始化 Trainer
-    trainer = Trainer(model, criterion, optimizer, device, scheduler=scheduler)
+    trainer = TrainerBert(model, criterion, optimizer, device, scheduler=scheduler)
 
     # EarlyStopping 监控指标
     if args.early_stop_metric == "loss":
