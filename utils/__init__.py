@@ -8,6 +8,7 @@ from .time_utils import format_time
 from .trainer import Trainer
 from .trainer_bert import TrainerBert
 from .trainer_custom_bert import TrainerCustomBert
+from .trainer_gcn_cora import TrainerGCN
 
 # 定义 __all__ 列表，明确指出哪些名称是本包的公共 API
 # 这有助于控制通过 from utils import * 导入的内容，并文档化包的主要接口
@@ -18,6 +19,7 @@ __all__ = [
     'Trainer',
     'TrainerBert',
     'TrainerCustomBert',
+    'TrainerGCN'
 ]
 
 # 定义包的版本号，方便其他地方引用
