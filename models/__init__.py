@@ -9,6 +9,7 @@ from .vggnet_mnist import VGGNetMnist
 from .custom_bert import CustomBertForClassification
 from .gcn_cora import GCNModel
 from .gcn_mutag import GCNMutag
+from .sage_pool_net import SAGEPoolNet
 
 # 定义 __all__ 列表，明确指出哪些名称是本包的公共 API
 # 这有助于控制通过 from models import * 导入的内容，并文档化包的主要接口
@@ -19,7 +20,8 @@ __all__ = [
     'VGGNetMnist',
     'CustomBertForClassification',
     'GCNModel',
-    'GCNMutag'
+    'GCNMutag',
+    'SAGEPoolNet',
 ]
 
 # 定义包的版本号，方便其他地方引用

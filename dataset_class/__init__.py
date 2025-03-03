@@ -5,6 +5,7 @@
 from .cifar10_dataset import Cifar10Dataset
 from .mnist_dataset import MnistDataset
 from .agnews_dataset import AGNewsDataset
+from .yoochoose_dataset import YooChooseBinaryDataset
 
 # 定义 __all__ 列表，明确指出哪些名称是本包的公共 API
 # 这有助于控制通过 from dataset_class import * 导入的内容，并文档化包的主要接口
@@ -12,6 +13,7 @@ __all__ = [
     'Cifar10Dataset',
     'MnistDataset',
     "AGNewsDataset",
+    "YooChooseBinaryDataset",
 ]
 
 # 定义包的版本号，方便其他地方引用
