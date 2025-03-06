@@ -68,6 +68,10 @@ def parse_args():
     # 添加混合精度训练选项
     parser.add_argument("--use_amp", action="store_true", default=True, help="是否启用混合精度训练")
 
+    # 添加梯度裁剪相关参数
+    parser.add_argument("--gradient_clip_norm", type=float, default=None, help="基于范数的梯度裁剪的最大范数，默认不启用")
+    parser.add_argument("--gradient_clip_value", type=float, default=None, help="基于值的梯度裁剪的最大值，默认不启用")
+
     args = parser.parse_args()
     return args
 
@@ -132,7 +136,7 @@ def main():
         scheduler = None
 
     # 初始化 Trainer
-    trainer = TrainerCustomBert(model, criterion, optimizer, device, scheduler=scheduler, use_amp=args.use_amp)
+    trainer = TrainerCustomBert(model, criterion, optimizer, device, scheduler=scheduler, use_amp=args.use_amp, gradient_clip_norm=args.gradient_clip_norm, gradient_clip_value=args.gradient_clip_value)
 
     # EarlyStopping 监控指标
     if args.early_stop_metric == "loss":

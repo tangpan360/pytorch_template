@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 
 class TrainerCustomBert:
-    def __init__(self, model, criterion, optimizer, device, scheduler=None, use_amp=False):
+    def __init__(self, model, criterion, optimizer, device, scheduler=None, use_amp=False, gradient_clip_norm=None, gradient_clip_value=None):
         """
         初始化 Trainer 类。
 
@@ -15,6 +15,8 @@ class TrainerCustomBert:
             device (torch.device): 训练设备（CPU 或 GPU）。
             scheduler (torch.optim.lr_scheduler._LRScheduler, optional): 学习率调度器。
             use_amp (bool): 是否启用混合精度训练。
+            gradient_clip_norm (float, optional): 梯度裁剪的范数阈值。
+            gradient_clip_value (float, optional): 梯度裁剪的值阈值。
         """
         self.model = model
         self.criterion = criterion
@@ -23,6 +25,8 @@ class TrainerCustomBert:
         self.scheduler = scheduler
         self.use_amp = use_amp
         self.scaler = torch.cuda.amp.GradScaler() if use_amp else None
+        self.gradient_clip_norm = gradient_clip_norm
+        self.gradient_clip_value = gradient_clip_value
 
     def train_one_epoch(self, dataloader):
         """
@@ -49,10 +53,28 @@ class TrainerCustomBert:
             if self.use_amp:
                 # 使用 GradScaler 进行反向传播和优化
                 self.scaler.scale(loss).backward()
+
+                # 基于范数的裁剪
+                if self.gradient_clip_norm is not None:
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.gradient_clip_norm)
+                
+                # 基于值的裁剪
+                elif self.gradient_clip_value is not None:
+                    torch.nn.utils.clip_grad_value_(self.model.parameters(), self.gradient_clip_value)
+
                 self.scaler.step(self.optimizer)
                 self.scaler.update()
             else:
                 loss.backward()
+
+                # 基于范数的裁剪
+                if self.gradient_clip_norm is not None:
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.gradient_clip_norm)
+                
+                # 基于值的裁剪
+                elif self.gradient_clip_value is not None:
+                    torch.nn.utils.clip_grad_value_(self.model.parameters(), self.gradient_clip_value)
+
                 self.optimizer.step()
 
             # 调用 scheduler.step() 每个 batch 之后
