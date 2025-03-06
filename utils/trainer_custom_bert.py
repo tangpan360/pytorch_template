@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 
 class TrainerCustomBert:
-    def __init__(self, model, criterion, optimizer, device, scheduler=None):
+    def __init__(self, model, criterion, optimizer, device, scheduler=None, use_amp=False):
         """
         初始化 Trainer 类。
 
@@ -14,12 +14,15 @@ class TrainerCustomBert:
             optimizer (torch.optim.Optimizer): 优化器。
             device (torch.device): 训练设备（CPU 或 GPU）。
             scheduler (torch.optim.lr_scheduler._LRScheduler, optional): 学习率调度器。
+            use_amp (bool): 是否启用混合精度训练。
         """
         self.model = model
         self.criterion = criterion
         self.optimizer = optimizer
         self.device = device
         self.scheduler = scheduler
+        self.use_amp = use_amp
+        self.scaler = torch.cuda.amp.GradScaler() if use_amp else None
 
     def train_one_epoch(self, dataloader):
         """
@@ -37,10 +40,20 @@ class TrainerCustomBert:
             labels = batch["labels"].to(self.device)
 
             self.optimizer.zero_grad()
-            outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
-            loss = self.criterion(outputs, labels)
-            loss.backward()
-            self.optimizer.step()
+
+            # 混合精度训练
+            with torch.cuda.amp.autocast(enabled=self.use_amp):
+                outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
+                loss = self.criterion(outputs, labels)
+
+            if self.use_amp:
+                # 使用 GradScaler 进行反向传播和优化
+                self.scaler.scale(loss).backward()
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
+            else:
+                loss.backward()
+                self.optimizer.step()
 
             # 调用 scheduler.step() 每个 batch 之后
             if self.scheduler is not None:
@@ -71,8 +84,10 @@ class TrainerCustomBert:
                 attention_mask = batch["attention_mask"].to(self.device)
                 labels = batch["labels"].to(self.device)
 
-                outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
-                loss = self.criterion(outputs, labels)
+                # 混合精度推理
+                with torch.cuda.amp.autocast(enabled=self.use_amp):
+                    outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
+                    loss = self.criterion(outputs, labels)
 
                 total_loss += loss.item() * input_ids.size(0)
                 _, predicted = torch.max(outputs, 1)
@@ -99,8 +114,10 @@ class TrainerCustomBert:
                 attention_mask = batch["attention_mask"].to(self.device)
                 labels = batch["labels"].to(self.device)
 
-                outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
-                loss = self.criterion(outputs, labels)
+                # 混合精度推理
+                with torch.cuda.amp.autocast(enabled=self.use_amp):
+                    outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
+                    loss = self.criterion(outputs, labels)
 
                 total_loss += loss.item() * input_ids.size(0)
                 _, predicted = torch.max(outputs, 1)

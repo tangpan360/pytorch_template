@@ -64,6 +64,9 @@ def parse_args():
     parser.add_argument("--save_checkpoints", action="store_true", default=True, help="是否保存 checkpoint，用于恢复训练")
     parser.add_argument("--checkpoint_freq", type=int, default=2, help="每多少个 epoch 保存一次 checkpoint")
 
+    # 添加混合精度训练选项
+    parser.add_argument("--use_amp", action="store_true", default=True, help="是否启用混合精度训练")
+
     args = parser.parse_args()
     return args
 
@@ -121,7 +124,7 @@ def main():
         scheduler = None
 
     # 初始化 Trainer
-    trainer = TrainerCustomBert(model, criterion, optimizer, device, scheduler=scheduler)
+    trainer = TrainerCustomBert(model, criterion, optimizer, device, scheduler=scheduler, use_amp=args.use_amp)
 
     # EarlyStopping 监控指标
     if args.early_stop_metric == "loss":
@@ -169,7 +172,7 @@ def main():
                 print("随机状态已恢复")
 
             # 恢复混合精度训练 scaler 状态
-            if 'scaler_state_dict' in checkpoint and hasattr(trainer, 'scaler'):
+            if 'scaler_state_dict' in checkpoint and trainer.scaler is not None:
                 trainer.scaler.load_state_dict(checkpoint['scaler_state_dict'])
                 print("混合精度 scaler 状态已恢复")
         else:
@@ -257,8 +260,8 @@ def main():
                     'torch': torch.get_rng_state(),
                     'cuda': torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None
                 },
-                # 保存混合精度 scaler
-                'scaler_state_dict': trainer.scaler.state_dict() if hasattr(trainer, 'scaler') else None
+                # 只有在启用混合精度训练时才保存 scaler 状态
+                'scaler_state_dict': trainer.scaler.state_dict() if args.use_amp and hasattr(trainer, 'scaler') else None
             }, checkpoint_save_path)
             print(f"Checkpoint 已保存至 {checkpoint_save_path}")
 
