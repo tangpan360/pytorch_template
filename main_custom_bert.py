@@ -34,7 +34,8 @@ def parse_args():
 
     # scheduler 相关参数
     parser.add_argument("--use_scheduler", action="store_true", default=True, help="是否使用学习率调度器")
-    parser.add_argument("--warmup_steps", type=int, default=6000, help="学习率预热步数")
+    parser.add_argument("--warmup_steps", type=int, default=None, help="学习率预热步数，默认自动计算")
+    parser.add_argument("--warmup_ratio", type=float, default=0.1, help="学习率预热步数占总训练步数的比例，默认是 0.1")
 
     # 针对 AGNews 的数据路径配置
     parser.add_argument("--train_path", type=str, default="./data/ag_news/processed/train.parquet", help="训练集数据路径")
@@ -114,10 +115,17 @@ def main():
 
     # 学习率调度器
     if args.use_scheduler:
+        # 如果直接指定了 warmup_steps，则使用指定的步数
+        if args.warmup_steps is not None:
+            warmup_steps = args.warmup_steps
+        else:
+            # 如果没有指定 warmup_steps，则按比例计算
+            warmup_steps = int(args.warmup_ratio * len(train_loader) * args.epochs)
+        
         total_steps = len(train_loader) * args.epochs
         scheduler = get_linear_schedule_with_warmup(
             optimizer,
-            num_warmup_steps=args.warmup_steps,
+            num_warmup_steps=warmup_steps,
             num_training_steps=total_steps
         )
     else:
