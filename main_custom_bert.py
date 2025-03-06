@@ -25,52 +25,54 @@ from utils.seed_utils import set_seed
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a simple AG News dataset.")
-    # 常用超参数示例，实际使用中可按需调整
-    parser.add_argument("--seed", type=int, default=42, help="随机种子")
-    parser.add_argument("--num_classes", type=int, default=4, help="类别数")
-    parser.add_argument("--lr", type=float, default=2e-5, help="学习率")
-    parser.add_argument("--epochs", type=int, default=50, help="训练轮数")
-    parser.add_argument("--batch_size", type=int, default=64, help="批量大小")
+    
+    # 常用超参数，实际使用时可根据需要调整
+    parser.add_argument("--seed", type=int, default=42, help="随机种子，用于确保结果的可重复性")
+    parser.add_argument("--num_classes", type=int, default=4, help="分类问题的类别数")
+    parser.add_argument("--lr", type=float, default=2e-5, help="学习率，控制参数更新的步长")
+    parser.add_argument("--epochs", type=int, default=50, help="训练总轮数")
+    parser.add_argument("--batch_size", type=int, default=64, help="每个批次的数据量")
+    parser.add_argument("--dropout_prob", type=float, default=0.3, help="Dropout 层的概率，防止过拟合")
+    parser.add_argument("--weight_decay", type=float, default=0.0, help="L2 正则化系数，防止模型过拟合")
 
-    # scheduler 相关参数
-    parser.add_argument("--use_scheduler", action="store_true", default=True, help="是否使用学习率调度器")
-    parser.add_argument("--warmup_steps", type=int, default=None, help="学习率预热步数，默认自动计算")
-    parser.add_argument("--warmup_ratio", type=float, default=0.1, help="学习率预热步数占总训练步数的比例，默认是 0.1")
+    # 学习率调度器相关参数
+    parser.add_argument("--use_scheduler", action="store_true", default=True, help="是否启用学习率调度器")
+    parser.add_argument("--warmup_steps", type=int, default=None, help="学习率预热步数，默认由程序自动计算")
+    parser.add_argument("--warmup_ratio", type=float, default=0.1, help="预热步数占训练总步数的比例，默认为 0.1")
 
-    # 针对 AGNews 的数据路径配置
-    parser.add_argument("--train_path", type=str, default="./data/ag_news/processed/train.parquet", help="训练集数据路径")
-    parser.add_argument("--val_path", type=str, default="./data/ag_news/processed/val.parquet", help="验证集数据路径")
-    parser.add_argument("--test_path", type=str, default="./data/ag_news/processed/test.parquet", help="测试集数据路径")
+    # 数据路径配置（针对 AGNews 数据集）
+    parser.add_argument("--train_path", type=str, default="./data/ag_news/processed/train.parquet", help="训练集数据存放路径")
+    parser.add_argument("--val_path", type=str, default="./data/ag_news/processed/val.parquet", help="验证集数据存放路径")
+    parser.add_argument("--test_path", type=str, default="./data/ag_news/processed/test.parquet", help="测试集数据存放路径")
 
-    # 将 tokenizer 和 model 名字或路径作为参数传入
-    parser.add_argument("--tokenizer_name", type=str, default="prajjwal1/bert-tiny", help="HuggingFace Tokenizer 名称或路径")
-    parser.add_argument("--model_name", type=str, default="prajjwal1/bert-tiny", help="HuggingFace 预训练模型名称或路径")
+    # 模型和 tokenizer 配置
+    parser.add_argument("--tokenizer_name", type=str, default="prajjwal1/bert-tiny", help="HuggingFace Tokenizer 的名称或路径")
+    parser.add_argument("--model_name", type=str, default="prajjwal1/bert-tiny", help="HuggingFace 预训练模型的名称或路径")
 
     # 其它可选参数
-    parser.add_argument("--max_length", type=int, default=128, help="文本最大长度")
-    parser.add_argument("--log_dir", type=str, default="./logs/ag_news_custom_bert/", help="日志文件夹路径")
+    parser.add_argument("--max_length", type=int, default=128, help="输入文本的最大长度")
+    parser.add_argument("--log_dir", type=str, default="./logs/ag_news_custom_bert/", help="日志保存的文件夹路径")
 
-    # EarlyStopping相关
-    parser.add_argument("--patience", type=int, default=5, help="早停的等待轮数")
-    parser.add_argument("--delta", type=float, default=0.0, help="判断改善的阈值")
-    parser.add_argument("--early_stop_metric", type=str, default="loss", choices=["loss", "acc"],
-                        help="选择使用验证集损失('loss')或准确率('acc')进行早停")
-    parser.add_argument("--early_stop_verbose", action="store_false", default=True, help="是否启用早停机制中的详细输出。"
-                        "如果设置为 True，则在早停检查点和模型保存时打印提示信息；如果设置为 False，则不打印这些信息。默认值为 True。")
-    parser.add_argument("--save_path", type=str, default="./checkpoints/ag_news_custom_bert/best_model.pth",
-                        help="最优模型权重保存路径（含文件名）")
+    # 早停相关参数
+    parser.add_argument("--patience", type=int, default=5, help="早停机制中的最大等待轮数")
+    parser.add_argument("--delta", type=float, default=0.0, help="衡量改善的阈值")
+    parser.add_argument("--early_stop_metric", type=str, default="loss", choices=["loss", "acc"], 
+                        help="选择验证集的损失（'loss'）或准确率（'acc'）作为早停依据")
+    parser.add_argument("--early_stop_verbose", action="store_false", default=True, help="是否输出早停过程中的详细信息")
+    parser.add_argument("--save_path", type=str, default="./checkpoints/ag_news_custom_bert/best_model.pth", 
+                        help="保存最优模型权重的路径（包含文件名）")
 
-    # checkpoint 保存与加载相关参数
-    parser.add_argument("--resume_from_checkpoint", action="store_true", default=True, help="是否从 checkpoint 恢复训练")
-    parser.add_argument("--save_checkpoints", action="store_true", default=True, help="是否保存 checkpoint，用于恢复训练")
-    parser.add_argument("--checkpoint_freq", type=int, default=2, help="每多少个 epoch 保存一次 checkpoint")
+    # Checkpoint 保存与加载相关参数
+    parser.add_argument("--resume_from_checkpoint", action="store_true", default=True, help="是否从保存的 checkpoint 恢复训练")
+    parser.add_argument("--save_checkpoints", action="store_true", default=True, help="是否保存 checkpoint 以便后续恢复训练")
+    parser.add_argument("--checkpoint_freq", type=int, default=2, help="每经过多少个 epoch 保存一次 checkpoint")
 
-    # 添加混合精度训练选项
+    # 混合精度训练选项
     parser.add_argument("--use_amp", action="store_true", default=True, help="是否启用混合精度训练")
 
-    # 添加梯度裁剪相关参数
-    parser.add_argument("--gradient_clip_norm", type=float, default=None, help="基于范数的梯度裁剪的最大范数，默认不启用")
-    parser.add_argument("--gradient_clip_value", type=float, default=None, help="基于值的梯度裁剪的最大值，默认不启用")
+    # 梯度裁剪相关参数
+    parser.add_argument("--gradient_clip_norm", type=float, default=None, help="基于范数的梯度裁剪最大值，默认不启用")
+    parser.add_argument("--gradient_clip_value", type=float, default=None, help="基于值的梯度裁剪最大值，默认不启用")
 
     args = parser.parse_args()
     return args
@@ -112,10 +114,10 @@ def main():
     model = CustomBertForClassification(
         model_name=args.model_name,
         num_classes=args.num_classes,
-        dropout_prob=0.3
+        dropout_prob=args.dropout_prob
     ).to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
     # 学习率调度器
     if args.use_scheduler:
