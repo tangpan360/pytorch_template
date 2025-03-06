@@ -33,7 +33,7 @@ def parse_args():
     parser.add_argument("--epochs", type=int, default=50, help="训练总轮数")
     parser.add_argument("--batch_size", type=int, default=64, help="每个批次的数据量")
     parser.add_argument("--dropout_prob", type=float, default=0.3, help="Dropout 层的概率，防止过拟合")
-    parser.add_argument("--weight_decay", type=float, default=0.0, help="L2 正则化系数，防止模型过拟合")
+    parser.add_argument("--weight_decay", type=float, default=0.01, help="L2 正则化系数，防止模型过拟合")
 
     # 学习率调度器相关参数
     parser.add_argument("--use_scheduler", action="store_true", default=True, help="是否启用学习率调度器")
@@ -63,16 +63,16 @@ def parse_args():
                         help="保存最优模型权重的路径（包含文件名）")
 
     # Checkpoint 保存与加载相关参数
-    parser.add_argument("--resume_from_checkpoint", action="store_true", default=True, help="是否从保存的 checkpoint 恢复训练")
-    parser.add_argument("--save_checkpoints", action="store_true", default=True, help="是否保存 checkpoint 以便后续恢复训练")
+    parser.add_argument("--resume_from_checkpoint", action="store_true", default=True, help="是否从保存的 checkpoint 恢复训练，False 表示不启用")
+    parser.add_argument("--save_checkpoints", action="store_true", default=True, help="是否保存 checkpoint 以便后续恢复训练，False 表示不启用")
     parser.add_argument("--checkpoint_freq", type=int, default=2, help="每经过多少个 epoch 保存一次 checkpoint")
 
     # 混合精度训练选项
-    parser.add_argument("--use_amp", action="store_true", default=True, help="是否启用混合精度训练")
+    parser.add_argument("--use_amp", action="store_true", default=True, help="是否启用混合精度训练，False 表示不启用")
 
     # 梯度裁剪相关参数
-    parser.add_argument("--gradient_clip_norm", type=float, default=None, help="基于范数的梯度裁剪最大值，默认不启用")
-    parser.add_argument("--gradient_clip_value", type=float, default=None, help="基于值的梯度裁剪最大值，默认不启用")
+    parser.add_argument("--gradient_clip_norm", type=float, default=None, help="基于范数的梯度裁剪最大值，None 表示不启用（常用值：0.5-5.0）")
+    parser.add_argument("--gradient_clip_value", type=float, default=None, help="基于值的梯度裁剪最大值，None 表示不启用（常用值：0.1-1.0）")
 
     args = parser.parse_args()
     return args
@@ -156,6 +156,7 @@ def main():
     if args.resume_from_checkpoint:
         checkpoint_files = [f for f in os.listdir(save_dir) if f.startswith("checkpoint_") and f.endswith(".pth")]
         if checkpoint_files:
+            print("检测到从断点恢复训练，正在恢复训练状态...\n")
             # 获取最新的 checkpoint 文件
             latest_checkpoint = max(checkpoint_files, key=lambda f: int(f.split('_')[1].split('.')[0]))
             checkpoint_path = os.path.join(save_dir, latest_checkpoint)
@@ -172,10 +173,6 @@ def main():
                 scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
                 print("学习率调度器状态已恢复")
 
-            # 恢复 epoch 计数
-            start_epoch = checkpoint['epoch'] + 1  # 加 1 以便从下一个 epoch 开始
-            print(f"从 {checkpoint_path} 加载 checkpoint，从第 {start_epoch} 个 epoch 开始")
-
             # 恢复随机状态
             if 'rng_state' in checkpoint:
                 random.setstate(checkpoint['rng_state']['python'])
@@ -189,6 +186,10 @@ def main():
             if 'scaler_state_dict' in checkpoint and trainer.scaler is not None:
                 trainer.scaler.load_state_dict(checkpoint['scaler_state_dict'])
                 print("混合精度 scaler 状态已恢复")
+
+            # 恢复 epoch 计数
+            start_epoch = checkpoint['epoch'] + 1  # 加 1 以便从下一个 epoch 开始
+            print(f"从 {checkpoint_path} 加载 checkpoint，从第 {start_epoch} 个 epoch 开始")
         else:
             print("未找到 checkpoint，从头开始训练")
 
@@ -282,7 +283,7 @@ def main():
     # ---------- 测试集评估最优模型 ---------- #
     checkpoint_path = early_stopper.save_path
     try:
-        trainer.model.load_state_dict(torch.load(checkpoint_path)['model_state_dict'])
+        trainer.model.load_state_dict(torch.load(checkpoint_path))
         print(f"\nLoaded the best model weights from {checkpoint_path} for testing.")
     except FileNotFoundError:
         print("Warning: best model weights not found, using current model.")
