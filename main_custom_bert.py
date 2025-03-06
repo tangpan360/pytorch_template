@@ -6,6 +6,8 @@ import torch.nn as nn
 import torch.optim as optim
 import os
 import json
+import random
+import numpy as np
 
 from torch.utils.data import DataLoader
 from transformers import BertTokenizer, get_linear_schedule_with_warmup
@@ -56,6 +58,11 @@ def parse_args():
                         "如果设置为 True，则在早停检查点和模型保存时打印提示信息；如果设置为 False，则不打印这些信息。默认值为 True。")
     parser.add_argument("--save_path", type=str, default="./checkpoints/ag_news_custom_bert/best_model.pth",
                         help="最优模型权重保存路径（含文件名）")
+
+    # checkpoint 保存与加载相关参数
+    parser.add_argument("--resume_from_checkpoint", action="store_true", default=True, help="是否从 checkpoint 恢复训练")
+    parser.add_argument("--save_checkpoints", action="store_true", default=True, help="是否保存 checkpoint，用于恢复训练")
+    parser.add_argument("--checkpoint_freq", type=int, default=2, help="每多少个 epoch 保存一次 checkpoint")
 
     args = parser.parse_args()
     return args
@@ -127,6 +134,47 @@ def main():
     if save_dir and not os.path.exists(save_dir):
         os.makedirs(save_dir, exist_ok=True)
 
+    # 加载最新的 checkpoint，如果需要恢复
+    start_epoch = 0
+    if args.resume_from_checkpoint:
+        checkpoint_files = [f for f in os.listdir(save_dir) if f.startswith("checkpoint_") and f.endswith(".pth")]
+        if checkpoint_files:
+            # 获取最新的 checkpoint 文件
+            latest_checkpoint = max(checkpoint_files, key=lambda f: int(f.split('_')[1].split('.')[0]))
+            checkpoint_path = os.path.join(save_dir, latest_checkpoint)
+            checkpoint = torch.load(checkpoint_path)
+
+            # 恢复模型和优化器状态
+            model.load_state_dict(checkpoint['model_state_dict'])
+            print("模型状态已恢复")
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            print("优化器状态已恢复")
+
+            # 恢复学习率调度器状态
+            if scheduler is not None and checkpoint.get('scheduler_state_dict') is not None:
+                scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+                print("学习率调度器状态已恢复")
+
+            # 恢复 epoch 计数
+            start_epoch = checkpoint['epoch'] + 1  # 加 1 以便从下一个 epoch 开始
+            print(f"从 {checkpoint_path} 加载 checkpoint，从第 {start_epoch} 个 epoch 开始")
+
+            # 恢复随机状态
+            if 'rng_state' in checkpoint:
+                random.setstate(checkpoint['rng_state']['python'])
+                np.random.set_state(checkpoint['rng_state']['numpy'])
+                torch.set_rng_state(checkpoint['rng_state']['torch'])
+                if torch.cuda.is_available():
+                    torch.cuda.set_rng_state_all(checkpoint['rng_state']['cuda'])
+                print("随机状态已恢复")
+
+            # 恢复混合精度训练 scaler 状态
+            if 'scaler_state_dict' in checkpoint and hasattr(trainer, 'scaler'):
+                trainer.scaler.load_state_dict(checkpoint['scaler_state_dict'])
+                print("混合精度 scaler 状态已恢复")
+        else:
+            print("未找到 checkpoint，从头开始训练")
+
     early_stopper = EarlyStopping(
         patience=args.patience,
         verbose=args.early_stop_verbose,
@@ -139,14 +187,14 @@ def main():
     os.makedirs(args.log_dir, exist_ok=True)
     log_path = os.path.join(args.log_dir, "training_metrics.jsonl")  # 每个 epoch 一行
 
-    # 如果文件存在，就删除
-    if os.path.exists(log_path):
+    # 如果是从头开始训练，则删除已有日志文件；如果恢复训练，则保留原日志，继续追加
+    if start_epoch == 0 and os.path.exists(log_path):
         os.remove(log_path)
 
     # 记录训练开始时间
     start_time = time.time()
 
-    for epoch in range(args.epochs):
+    for epoch in range(start_epoch, args.epochs):
         print(f"\nEpoch [{epoch+1}/{args.epochs}]")
 
         # ---------- Training ---------- #
@@ -193,10 +241,31 @@ def main():
             print("Early stopping triggered. Stop training.")
             break
 
+        # ========== 3) 保存 checkpoint ========== #
+        if args.save_checkpoints and (epoch + 1) % args.checkpoint_freq == 0:
+            checkpoint_save_path = os.path.join(save_dir, f"checkpoint_{epoch + 1}.pth")
+            # 保存模型、优化器、学习率调度器、随机状态及混合精度训练 scaler
+            torch.save({
+                'epoch': epoch,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'scheduler_state_dict': scheduler.state_dict() if scheduler else None,
+                # 保存随机状态
+                'rng_state': {
+                    'python': random.getstate(),
+                    'numpy': np.random.get_state(),
+                    'torch': torch.get_rng_state(),
+                    'cuda': torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None
+                },
+                # 保存混合精度 scaler
+                'scaler_state_dict': trainer.scaler.state_dict() if hasattr(trainer, 'scaler') else None
+            }, checkpoint_save_path)
+            print(f"Checkpoint 已保存至 {checkpoint_save_path}")
+
     # ---------- 测试集评估最优模型 ---------- #
     checkpoint_path = early_stopper.save_path
     try:
-        trainer.model.load_state_dict(torch.load(checkpoint_path))
+        trainer.model.load_state_dict(torch.load(checkpoint_path)['model_state_dict'])
         print(f"\nLoaded the best model weights from {checkpoint_path} for testing.")
     except FileNotFoundError:
         print("Warning: best model weights not found, using current model.")
